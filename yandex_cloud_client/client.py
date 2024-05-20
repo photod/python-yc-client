@@ -5,6 +5,8 @@
 import json
 import logging
 import requests
+import threading
+import time
 
 from types import CoroutineType
 
@@ -93,7 +95,7 @@ class YandexCloudClient(YandexCloudObject):
                  oauth_token: str = None,
                  iam_token: str = None,
                  service_account_key: dict = None,
-                 metadata_auth_mode: bool = None,
+                 auth_inside_vm: bool = None,
                  request: object = None,
                  timeout: int = None,
                  operation_timeout: int = None,
@@ -105,7 +107,7 @@ class YandexCloudClient(YandexCloudObject):
                  iam_url: str = None,
                  operation_url: str = None):
 
-        _cred_args = [x for x in (service_account_key, oauth_token, iam_token, metadata_auth_mode) if x is not None]
+        _cred_args = [x for x in (service_account_key, oauth_token, iam_token, auth_inside_vm) if x is not None]
         if len(_cred_args) > 1:
             message = f'Too many credentials({len(_cred_args)}) received, ' + \
                       'but only one credential type can be specified'
@@ -119,8 +121,9 @@ class YandexCloudClient(YandexCloudObject):
             self.token = YandexCloudClient.get_token_for_sa(service_account_key)
         elif iam_token:
             self.token = iam_token
-        elif metadata_auth_mode:
-            self.token = YandexCloudClient.get_token_from_metadata_service()
+        elif auth_inside_vm:
+            self.token_default_refresh_time = 2*60*60
+            self.token = self.handle_inside_vm_token_timer()
         else:
             raise InvalidToken('IAM/OAuth token or service account key required!')
 
@@ -141,6 +144,18 @@ class YandexCloudClient(YandexCloudObject):
         self.certificate_data_url = certificate_data_url or CERTIFICATE_DATA_URL
         self.operation_url = operation_url or OPERATION_URL
 
+    def handle_inside_vm_token_timer(self):
+        """Starts timer that refreshes token from metadata service from inside a VM"""
+        (self.token, self.token_expires_in) = YandexCloudClient.get_token_from_metadata_service()
+        if hasattr(self, '_request'):
+            self._request.set_and_return_client(self)
+        try_in_sec = int(self.token_expires_in) if int(self.token_expires_in) < self.token_default_refresh_time else self.token_default_refresh_time
+        logger.info(f'token refresh (inside-vm): token {self.token[1::12]} expires in {self.token_expires_in}, next refresh in {try_in_sec} sec')
+        timer = threading.Timer(try_in_sec, self.handle_inside_vm_token_timer)
+        timer.daemon = True
+        timer.start()
+        return self.token
+
     @staticmethod
     def get_iam_token(oauth_token, raw=False) -> [str, dict]:
         """Returns IAM Token for user account."""
@@ -160,11 +175,13 @@ class YandexCloudClient(YandexCloudObject):
             return response
         return response.get('iamToken')
 
+    @log
     def get_token_from_metadata_service(raw=False) -> [str, dict]:
         """Returns IAM Token from metadata service from inside a trusted VM"""
         url = 'http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token'
 
-        result = requests.post(url, headers={'Metadata-Flavor': 'Google'})
+        result = requests.get(url, headers={'Metadata-Flavor': 'Google'})
+
         try:
             response = result.json()
         except json.decoder.JSONDecodeError:
@@ -175,8 +192,7 @@ class YandexCloudClient(YandexCloudObject):
 
         if raw:
             return response
-        return response.get('iamToken')
-
+        return (response.get('access_token'), response.get('expires_in'))
 
     @staticmethod
     def get_token_for_sa(sa_credentials: dict, raw=False) -> [str, dict]:

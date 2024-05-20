@@ -53,12 +53,15 @@ class ServiceAccountAuth:
     def private_key(self):
         """Validating service account private key."""
         prefix_start = '-----BEGIN PRIVATE KEY-----'
+        prefix_start_YC_special = 'PLEASE DO NOT REMOVE THIS LINE! Yandex.Cloud SA Key ID'
         _private_key = self._sa_key.get('private_key')
 
         if _private_key is None:
             raise KeyError(f'Invalid service account key, missing: private_key')
 
-        elif not _private_key.startswith(prefix_start):
+        elif not (_private_key.startswith(prefix_start) or
+                 (_private_key.startswith(prefix_start_YC_special) and _private_key.count(prefix_start)>0)
+                 ):
             raise TypeError(f'Invalid private key format, required format: SHA-256')
 
         return _private_key
