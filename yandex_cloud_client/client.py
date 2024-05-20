@@ -93,6 +93,7 @@ class YandexCloudClient(YandexCloudObject):
                  oauth_token: str = None,
                  iam_token: str = None,
                  service_account_key: dict = None,
+                 metadata_auth_mode: bool = None,
                  request: object = None,
                  timeout: int = None,
                  operation_timeout: int = None,
@@ -104,7 +105,7 @@ class YandexCloudClient(YandexCloudObject):
                  iam_url: str = None,
                  operation_url: str = None):
 
-        _cred_args = [x for x in (service_account_key, oauth_token, iam_token) if x is not None]
+        _cred_args = [x for x in (service_account_key, oauth_token, iam_token, metadata_auth_mode) if x is not None]
         if len(_cred_args) > 1:
             message = f'Too many credentials({len(_cred_args)}) received, ' + \
                       'but only one credential type can be specified'
@@ -118,6 +119,8 @@ class YandexCloudClient(YandexCloudObject):
             self.token = YandexCloudClient.get_token_for_sa(service_account_key)
         elif iam_token:
             self.token = iam_token
+        elif metadata_auth_mode:
+            self.token = YandexCloudClient.get_token_from_metadata_service()
         else:
             raise InvalidToken('IAM/OAuth token or service account key required!')
 
@@ -156,6 +159,24 @@ class YandexCloudClient(YandexCloudObject):
         if raw:
             return response
         return response.get('iamToken')
+
+    def get_token_from_metadata_service(raw=False) -> [str, dict]:
+        """Returns IAM Token from metadata service from inside a trusted VM"""
+        url = 'http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token'
+
+        result = requests.post(url, headers={'Metadata-Flavor': 'Google'})
+        try:
+            response = result.json()
+        except json.decoder.JSONDecodeError:
+            raise BadRequest(result.text)
+
+        if not result.ok:
+            raise BadRequest(result.text)
+
+        if raw:
+            return response
+        return response.get('iamToken')
+
 
     @staticmethod
     def get_token_for_sa(sa_credentials: dict, raw=False) -> [str, dict]:
