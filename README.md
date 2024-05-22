@@ -1,4 +1,6 @@
-❗️❗️❗️ **This project is no longer maintained**
+This repo is a fork of https://github.com/akimrx/python-yc-client which is archived and no longer mainained. The main purpose of this fork is to have lightweight all-in-one module which takes care of the Yandex Cloud related operations to implement utilities such as angel-script to keep preemptible VMs running.
+No detaied documentations planned, original code is well-written and documentation-as-a-code approach is the plan.
+
 
 # [Unofficial] Yandex.Cloud REST API Client
 
@@ -8,32 +10,34 @@
 
 ![](docs/logo.png)
 
-**ALPHA VERSION**  
-  
-**Warning:** Some features may be unavailable or unstable. The client is developed by one developer in his spare time. If you are not satisfied with this, you can always add or change the client by creating a pull request.
+**ALPHA VERSION**
 
-**Probably, this REST API Client will make your life with Yandex.Cloud a little easier.**  
+First of all, please, check out the offical python SDK, https://github.com/yandex-cloud/python-sdk, it is a recommended option.
+
+**Warning:** Some yandex cloud features is not implemented and some might be unstable. The focused implemeted features are relate to VPC, IAM, certificates and compute.  The client is developed by one developer in his spare time. If you are not satisfied with this, you can always add or change the client by creating a pull request.
+
+**Hopefully, this REST API Client could make your life with Yandex.Cloud a little easier.**
 
 ## Installing
 
-* Installing with [pip](https://pypi.org/project/yandex-cloud-client/):
-```bash
-pip3 install yandex-cloud-client
-```
-  
+* Installing with [pip]:
+
+**This options is not currently available, sorry**
+
+
 * Also, you can install from source with:
 
 ```bash
-git clone https://github.com/akimrx/python-yc-client  --recursive
-cd python-yc-client 
+git clone https://github.com/photod/python-yc-client/  --recursive
+cd python-yc-client
 make install
 ```
-  
+
 or
-  
+
 ```bash
-git clone https://github.com/akimrx/python-yc-client  --recursive
-cd python-yc-client 
+git clone https://github.com/photod/python-yc-client/  --recursive
+cd python-yc-client
 python3 setup.py install
 ```
 
@@ -41,7 +45,7 @@ python3 setup.py install
 
 ### Client and authorization
 
-The first step is to import required client of the Yandex.Cloud Services.  
+The first step is to import required client of the Yandex.Cloud Services.
 Each client of a Yandex.Cloud service inherits authorization from the base client, which supports three methods:
 
 * **[OAuth token](https://oauth.yandex.com/authorize?response_type=token&client_id=1a6990aa636648e9b2ef855fa7bec2fb)**
@@ -59,6 +63,16 @@ from yandex_cloud_client import ComputeClient
 
 client = ComputeClient(iam_token='YOUR_IAM_TOKEN')
 ```
+
+* **[IAM token from metadata service](https://yandex.cloud/en-ru/docs/compute/operations/vm-connect/auth-inside-vm)**
+
+```python
+from yandex_cloud_client import ComputeClient
+
+client = ComputeClient(auth_inside_vm=True)
+```
+
+Module takes care of refreshing token each hour.
 
 * **[Service account key](https://cloud.yandex.com/docs/iam/operations/authorized-key/create)**
 
@@ -137,6 +151,6 @@ logger = logging.getLogger(__name__)
 
 ### Borrowed arch design
 
-The client was written under the inspiration of architecture design:  
-* [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)  
-* [yandex-music-api](https://github.com/MarshalX/yandex-music-api)  
+The client was written under the inspiration of architecture design:
+* [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
+* [yandex-music-api](https://github.com/MarshalX/yandex-music-api)
