@@ -256,7 +256,7 @@ def prepare_start_tasks(instances):
         for instance in instances
     ]
     logger.debug(f"Created {len(tasks)} tasks for checkout instance state")
-    return asyncio.gather(*tasks)
+    return tasks
 
 
 def main():
@@ -283,10 +283,8 @@ def main():
         stopped_instances = list(filter(lambda i: i.stopped, all_matching_instances.values()))
         if stopped_instances:
             logger.debug("Preparing tasks...")
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(prepare_start_tasks(stopped_instances))
+            asyncio.run(asyncio.wait(prepare_start_tasks(stopped_instances)))
             logger.debug("Tasks completed. Sleeping...")
-            loop.close()
         time.sleep(int(config.interval))
 
 
