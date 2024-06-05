@@ -285,6 +285,8 @@ def main():
             logger.debug("Preparing tasks...")
             asyncio.run(asyncio.wait(prepare_start_tasks(stopped_instances)))
             logger.debug("Tasks completed. Sleeping...")
+        else:
+            logger.info(f"Instances are ok ({len(list(map(lambda i: (i.id), all_matching_instances.values()))) })")
         time.sleep(int(config.interval))
 
 
